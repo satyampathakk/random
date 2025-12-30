@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RandomChats.in - Free Video Chat & Text Chat with Strangers | Make Indian Friends Online</title>
+    <meta name="description" content="RandomChats.in - Meet new people instantly! Free random video chat and text chat with strangers from India and worldwide.">
+    <meta name="keywords" content="random chat, video chat, chat with strangers, omegle alternative, random video call, indian chat, make indian friends">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="canonical" href="https://randomchats.in">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%236366f1'/%3E%3Cpath d='M30 35h40c3 0 5 2 5 5v20c0 3-2 5-5 5H55l-10 10v-10H30c-3 0-5-2-5-5V40c0-3 2-5 5-5z' fill='white'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Landing Screen -->
+        <div id="landing-screen" class="screen active">
+            <div class="bg-effects">
+                <div class="blob blob-1"></div>
+                <div class="blob blob-2"></div>
+                <div class="blob blob-3"></div>
+            </div>
+            
+            <div class="landing-wrapper">
+                <header class="brand">
+                    <div class="logo-box">
+                        <span>💬</span>
+                    </div>
+                    <h1>RandomChats<span>.in</span></h1>
+                    <p class="tagline">Connect with Strangers Worldwide</p>
+                </header>
+                
+                <div class="hero">
+                    <h2>Meet New People <span class="highlight">Instantly</span></h2>
+                    <p>Free video calls & text chat with random strangers from India 🇮🇳 and around the globe. No signup needed!</p>
+                </div>
+                
+                <div class="card">
+                    <div class="online-count">
+                        <span class="pulse"></span>
+                        <span id="online-count">1,247</span> people online now
+                    </div>
+                    
+                    <div class="input-wrap">
+                        <span class="input-icon">👤</span>
+                        <input type="text" id="nickname-input" placeholder="Enter your nickname..." maxlength="20" autocomplete="off">
+                    </div>
+                    
+                    <div class="mode-tabs">
+                        <button class="tab active" data-mode="text">
+                            <span class="tab-icon">💬</span>
+                            <div class="tab-text">
+                                <strong>Text Chat</strong>
+                                <small>Send messages</small>
+                            </div>
+                        </button>
+                        <button class="tab" data-mode="video">
+                            <span class="tab-icon">📹</span>
+                            <div class="tab-text">
+                                <strong>Video Call</strong>
+                                <small>Face to face</small>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <button id="start-btn" class="start-btn" disabled>
+                        <span>Start Chatting Now</span>
+                        <span class="arrow">→</span>
+                    </button>
+                </div>
+                
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">🔒</span>
+                        <div>
+                            <strong>100% Anonymous</strong>
+                            <p>No registration required</p>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">⚡</span>
+                        <div>
+                            <strong>Instant Match</strong>
+                            <p>Connect in seconds</p>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🌍</span>
+                        <div>
+                            <strong>Global Community</strong>
+                            <p>Meet people worldwide</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <footer class="footer">
+                    <p>© 2025 RandomChats.in • Chat responsibly • Made with ❤️ in India</p>
+                </footer>
+            </div>
+        </div>
+
+        <!-- Chat Screen -->
+        <div id="chat-screen" class="screen">
+            <header class="chat-header">
+                <button id="back-btn" class="btn-icon" title="Leave">←</button>
+                <div class="user-info">
+                    <div class="avatar" id="partner-avatar">?</div>
+                    <div class="user-details">
+                        <div class="name" id="partner-name">Searching...</div>
+                        <div class="status" id="partner-status">Looking for partner</div>
+                    </div>
+                </div>
+                <button id="next-btn" class="btn-next" disabled>
+                    <span>Next</span>
+                    <span>⏭️</span>
+                </button>
+            </header>
+
+            <div class="chat-main">
+                <div id="video-container" class="video-area hidden">
+                    <video id="remote-video" autoplay playsinline></video>
+                    <div class="video-placeholder" id="remote-placeholder">
+                        <span>📹</span>
+                        <p>Waiting for partner's video...</p>
+                    </div>
+                    <div class="pip">
+                        <video id="local-video" autoplay playsinline muted></video>
+                        <span class="pip-label">You</span>
+                    </div>
+                    <div class="video-btns">
+                        <button id="toggle-mic" class="ctrl-btn active" title="Mute/Unmute">
+                            <span class="on">🎤</span>
+                            <span class="off">🔇</span>
+                        </button>
+                        <button id="toggle-camera" class="ctrl-btn active" title="Camera On/Off">
+                            <span class="on">📹</span>
+                            <span class="off">📷</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="messages-container" class="messages-area">
+                    <div class="messages" id="messages-list"></div>
+                    <div class="typing hidden" id="typing-indicator">
+                        <span></span><span></span><span></span>
+                        <p>Partner is typing...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input">
+                <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off" disabled>
+                <button id="send-btn" class="btn-send" disabled>
+                    <span>Send</span>
+                    <span>➤</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/app.js" defer></script>
+</body>
+</html>

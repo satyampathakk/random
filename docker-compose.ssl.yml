@@ -1,0 +1,7 @@
+# Use this after SSL is set up:
+# docker compose -f docker-compose.yml -f docker-compose.ssl.yml up -d
+
+services:
+  nginx:
+    volumes:
+      - ./nginx/nginx-ssl.conf:/etc/nginx/nginx.conf:ro
