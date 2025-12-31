@@ -3,8 +3,8 @@
 # SSL Certificate Generator for randomchats.in
 # Run this script on your server after pointing DNS to your server IP
 
-DOMAIN="randomchats.in"
-EMAIL="admin@randomchats.in"  # Change this to your email
+DOMAIN="randomchatt.com"
+EMAIL="admin@randomchatt.com"  # Change this to your email
 
 echo "=========================================="
 echo "SSL Certificate Setup for $DOMAIN"
