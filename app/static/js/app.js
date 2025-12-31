@@ -302,6 +302,7 @@ class RandomChat {
     
     findNext() {
         this.closePeerConnection();
+        this.messagesList.innerHTML = '';
         this.ws.send(JSON.stringify({ type: 'next' }));
     }
     
