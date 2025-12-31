@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
@@ -7,11 +7,34 @@ from dataclasses import dataclass, field
 from typing import Optional
 import uuid
 import random
+from datetime import datetime
 
 app = FastAPI(title="Random Chat")
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
+
+# Admin API Key - Change this to a secure random string!
+ADMIN_API_KEY = "your-secret-admin-key-change-this"
+
+# Stats tracking
+class Stats:
+    def __init__(self):
+        self.total_visitors = 0
+        self.total_connections = 0
+        self.total_messages = 0
+        self.start_time = datetime.now()
+    
+    def to_dict(self):
+        return {
+            "total_visitors": self.total_visitors,
+            "total_connections": self.total_connections,
+            "total_messages": self.total_messages,
+            "uptime_seconds": int((datetime.now() - self.start_time).total_seconds()),
+            "start_time": self.start_time.isoformat()
+        }
+
+stats = Stats()
 
 # Bot names and conversation starters
 BOT_NAMES = [
@@ -213,15 +236,80 @@ async def handle_bot_reply(user: User, user_message: str, bot_name: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+    stats.total_visitors += 1
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/api/online-count")
 async def online_count():
     return {"count": len(manager.users)}
 
+# ==================== ADMIN API ====================
+
+def verify_admin_key(x_admin_key: str = Header(None)):
+    if x_admin_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid admin key")
+    return True
+
+@app.get("/api/admin/stats")
+async def admin_stats(x_admin_key: str = Header(None)):
+    """Get full admin statistics"""
+    verify_admin_key(x_admin_key)
+    
+    # Count real users (not bots)
+    real_users = [u for u in manager.users.values() if not u.user_id.startswith("bot_")]
+    text_users = [u for u in real_users if u.mode == "text"]
+    video_users = [u for u in real_users if u.mode == "video"]
+    
+    # Users in queue (waiting for partner)
+    text_waiting = len(manager.text_queue)
+    video_waiting = len(manager.video_queue)
+    
+    # Users chatting (have a partner)
+    chatting = [u for u in real_users if u.partner_id is not None]
+    chatting_with_bot = [u for u in chatting if u.partner_id and u.partner_id.startswith("bot_")]
+    chatting_with_real = [u for u in chatting if u.partner_id and not u.partner_id.startswith("bot_")]
+    
+    return {
+        "online": {
+            "total": len(real_users),
+            "text_mode": len(text_users),
+            "video_mode": len(video_users),
+            "waiting_for_partner": text_waiting + video_waiting,
+            "chatting_with_real_user": len(chatting_with_real),
+            "chatting_with_bot": len(chatting_with_bot)
+        },
+        "queues": {
+            "text_queue": text_waiting,
+            "video_queue": video_waiting
+        },
+        "lifetime": stats.to_dict(),
+        "users": [
+            {
+                "nickname": u.nickname,
+                "mode": u.mode,
+                "has_partner": u.partner_id is not None,
+                "partner_is_bot": u.partner_id.startswith("bot_") if u.partner_id else False
+            }
+            for u in real_users
+        ]
+    }
+
+@app.get("/api/admin/online")
+async def admin_online(x_admin_key: str = Header(None)):
+    """Quick check - just online count"""
+    verify_admin_key(x_admin_key)
+    real_users = [u for u in manager.users.values() if not u.user_id.startswith("bot_")]
+    return {
+        "online_users": len(real_users),
+        "total_visitors": stats.total_visitors,
+        "total_connections": stats.total_connections,
+        "total_messages": stats.total_messages
+    }
+
 @app.websocket("/ws/{nickname}/{mode}")
 async def websocket_endpoint(websocket: WebSocket, nickname: str, mode: str):
     user = await manager.connect(websocket, nickname, mode)
+    stats.total_connections += 1
     bot_name = None
     
     try:
@@ -270,6 +358,7 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, mode: str):
             
             if msg_type == "chat_message":
                 message = data.get("message", "")
+                stats.total_messages += 1
                 
                 # Check if chatting with bot
                 if user.partner_id and user.partner_id.startswith("bot_") and bot_name:
