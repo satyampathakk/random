@@ -239,6 +239,10 @@ async def home(request: Request):
     stats.total_visitors += 1
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_panel(request: Request):
+    return templates.TemplateResponse("admin.html", {"request": request})
+
 @app.get("/api/online-count")
 async def online_count():
     return {"count": len(manager.users)}
