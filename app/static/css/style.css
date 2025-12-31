@@ -85,6 +85,11 @@ body{font-family:'Poppins',system-ui,sans-serif;background:var(--bg);color:var(-
 /* Chat Sidebar - wraps messages and input for side-by-side layout */
 .chat-sidebar{display:flex;flex-direction:column;flex:1;overflow:hidden;transition:width .3s ease,box-shadow .3s ease}
 
+/* Text-only mode - full screen chat (class-based for JS toggle) */
+.chat-main.text-only-mode .chat-sidebar{width:100%;max-width:100%;min-width:100%;border-left:none;box-shadow:none}
+.chat-main.text-only-mode .messages-area{max-width:900px;margin:0 auto;width:100%}
+.chat-main.text-only-mode .chat-input{max-width:900px;margin:0 auto;width:100%}
+
 /* Video */
 .video-area{height:50%;min-height:220px;background:#000;position:relative;display:flex;align-items:center;justify-content:center;transition:flex .3s ease,height .3s ease}
 .video-area.hidden{display:none}
@@ -155,7 +160,11 @@ body{font-family:'Poppins',system-ui,sans-serif;background:var(--bg);color:var(-
     .pip{width:150px;height:200px;bottom:80px;right:20px}
     .video-btns{bottom:20px;gap:16px}
     .ctrl-btn{width:56px;height:56px;font-size:1.4rem}
-    .chat-sidebar{width:320px;min-width:280px;max-width:380px;border-left:1px solid var(--card-border);flex:none;box-shadow:-4px 0 20px rgba(0,0,0,.3)}
+    /* Video mode - sidebar layout */
+    .chat-main:not(.text-only-mode) .chat-sidebar{width:320px;min-width:280px;max-width:380px;border-left:1px solid var(--card-border);flex:none;box-shadow:-4px 0 20px rgba(0,0,0,.3)}
+    /* Text-only mode - full width centered chat */
+    .chat-main.text-only-mode{justify-content:center}
+    .chat-main.text-only-mode .chat-sidebar{width:100%;max-width:900px;border-left:none;box-shadow:none;flex:1}
     .chat-sidebar .messages-area{flex:1;overflow:hidden}
     .chat-sidebar .messages{overflow-y:auto}
     .chat-sidebar .chat-input{flex-shrink:0}

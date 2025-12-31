@@ -187,10 +187,14 @@ class RandomChat {
         this.landingScreen.classList.remove('active');
         this.chatScreen.classList.add('active');
         
+        const chatMain = document.querySelector('.chat-main');
+        
         if (this.mode === 'video') {
             this.videoContainer.classList.remove('hidden');
+            chatMain.classList.remove('text-only-mode');
         } else {
             this.videoContainer.classList.add('hidden');
+            chatMain.classList.add('text-only-mode');
         }
         
         this.messagesList.innerHTML = '';
