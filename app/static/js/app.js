@@ -50,6 +50,22 @@ class RandomChat {
         this.remotePlaceholder = document.getElementById('remote-placeholder');
         this.toggleMicBtn = document.getElementById('toggle-mic');
         this.toggleCameraBtn = document.getElementById('toggle-camera');
+        
+        // Add video event listeners
+        this.remoteVideo.onloadedmetadata = () => {
+            console.log('Remote video metadata loaded');
+            this.remoteVideo.play().catch(e => console.error('Error playing remote video:', e));
+        };
+        
+        this.remoteVideo.onplaying = () => {
+            console.log('Remote video started playing');
+            this.remotePlaceholder.classList.add('hidden');
+        };
+        
+        this.remoteVideo.onerror = (e) => {
+            console.error('Remote video error:', e);
+            this.addSystemMessage('Video playback error. Please try refreshing.');
+        };
     }
     
     initEventListeners() {
@@ -91,13 +107,41 @@ class RandomChat {
         
         if (this.mode === 'video') {
             try {
+                console.log('Requesting camera and microphone access...');
                 this.localStream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: true
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
                 });
+                
+                console.log('Got local stream:', this.localStream);
                 this.localVideo.srcObject = this.localStream;
+                
+                // Ensure video is playing
+                this.localVideo.onloadedmetadata = () => {
+                    console.log('Local video metadata loaded');
+                    this.localVideo.play().catch(e => console.error('Error playing local video:', e));
+                };
+                
             } catch (err) {
-                alert('Camera/microphone access is required for video chat. Please allow access and try again.');
+                console.error('Media access error:', err);
+                let errorMsg = 'Camera/microphone access is required for video chat.';
+                
+                if (err.name === 'NotAllowedError') {
+                    errorMsg = 'Camera/microphone access was denied. Please allow access and try again.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = 'No camera or microphone found. Please check your devices.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = 'Camera/microphone is being used by another application.';
+                }
+                
+                alert(errorMsg);
                 return;
             }
         }
@@ -326,80 +370,168 @@ class RandomChat {
     
     // WebRTC Methods
     async createPeerConnection() {
-        this.peerConnection = new RTCPeerConnection(this.iceServers);
-        
-        this.peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                this.ws.send(JSON.stringify({
-                    type: 'ice_candidate',
-                    candidate: event.candidate
-                }));
+        try {
+            this.peerConnection = new RTCPeerConnection(this.iceServers);
+            
+            this.peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log('Sending ICE candidate:', event.candidate);
+                    this.ws.send(JSON.stringify({
+                        type: 'ice_candidate',
+                        candidate: event.candidate
+                    }));
+                }
+            };
+            
+            this.peerConnection.ontrack = (event) => {
+                console.log('Received remote track:', event);
+                if (event.streams && event.streams[0]) {
+                    this.remoteVideo.srcObject = event.streams[0];
+                    this.remotePlaceholder.classList.add('hidden');
+                    console.log('Remote video stream set successfully');
+                } else {
+                    console.error('No streams in track event');
+                }
+            };
+            
+            this.peerConnection.onconnectionstatechange = () => {
+                console.log('Connection state:', this.peerConnection.connectionState);
+                if (this.peerConnection.connectionState === 'failed') {
+                    console.error('WebRTC connection failed');
+                    this.addSystemMessage('Video connection failed. Try refreshing or switching to text mode.');
+                }
+            };
+            
+            this.peerConnection.oniceconnectionstatechange = () => {
+                console.log('ICE connection state:', this.peerConnection.iceConnectionState);
+            };
+            
+            if (this.localStream) {
+                console.log('Adding local stream tracks to peer connection');
+                this.localStream.getTracks().forEach(track => {
+                    console.log('Adding track:', track.kind, track.enabled);
+                    this.peerConnection.addTrack(track, this.localStream);
+                });
+            } else {
+                console.error('No local stream available when creating peer connection');
             }
-        };
-        
-        this.peerConnection.ontrack = (event) => {
-            this.remoteVideo.srcObject = event.streams[0];
-            this.remotePlaceholder.classList.add('hidden');
-        };
-        
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => {
-                this.peerConnection.addTrack(track, this.localStream);
-            });
+        } catch (error) {
+            console.error('Error creating peer connection:', error);
+            this.addSystemMessage('Failed to set up video connection. Please try again.');
         }
     }
     
     async createOffer() {
-        await this.createPeerConnection();
-        
-        const offer = await this.peerConnection.createOffer();
-        await this.peerConnection.setLocalDescription(offer);
-        
-        this.ws.send(JSON.stringify({
-            type: 'offer',
-            sdp: offer
-        }));
+        try {
+            console.log('Creating WebRTC offer...');
+            await this.createPeerConnection();
+            
+            const offer = await this.peerConnection.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true
+            });
+            console.log('Created offer:', offer);
+            
+            await this.peerConnection.setLocalDescription(offer);
+            console.log('Set local description (offer)');
+            
+            this.ws.send(JSON.stringify({
+                type: 'offer',
+                sdp: offer
+            }));
+            console.log('Sent offer to partner');
+        } catch (error) {
+            console.error('Error creating offer:', error);
+            this.addSystemMessage('Failed to initiate video call. Please try again.');
+        }
     }
     
     async handleOffer(data) {
-        await this.createPeerConnection();
-        
-        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-        
-        const answer = await this.peerConnection.createAnswer();
-        await this.peerConnection.setLocalDescription(answer);
-        
-        this.ws.send(JSON.stringify({
-            type: 'answer',
-            sdp: answer
-        }));
+        try {
+            console.log('Handling WebRTC offer:', data);
+            await this.createPeerConnection();
+            
+            await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            console.log('Set remote description (offer)');
+            
+            const answer = await this.peerConnection.createAnswer();
+            console.log('Created answer:', answer);
+            
+            await this.peerConnection.setLocalDescription(answer);
+            console.log('Set local description (answer)');
+            
+            this.ws.send(JSON.stringify({
+                type: 'answer',
+                sdp: answer
+            }));
+            console.log('Sent answer to partner');
+        } catch (error) {
+            console.error('Error handling offer:', error);
+            this.addSystemMessage('Failed to accept video call. Please try again.');
+        }
     }
     
     async handleAnswer(data) {
-        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        try {
+            console.log('Handling WebRTC answer:', data);
+            if (this.peerConnection) {
+                await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                console.log('Set remote description (answer)');
+            } else {
+                console.error('No peer connection when handling answer');
+            }
+        } catch (error) {
+            console.error('Error handling answer:', error);
+            this.addSystemMessage('Video connection error. Please try refreshing.');
+        }
     }
     
     async handleIceCandidate(data) {
-        if (this.peerConnection) {
-            await this.peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        try {
+            console.log('Handling ICE candidate:', data);
+            if (this.peerConnection && this.peerConnection.remoteDescription) {
+                await this.peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                console.log('Added ICE candidate');
+            } else {
+                console.warn('Cannot add ICE candidate - no peer connection or remote description');
+            }
+        } catch (error) {
+            console.error('Error handling ICE candidate:', error);
         }
     }
     
     closePeerConnection() {
         if (this.peerConnection) {
+            console.log('Closing peer connection');
             this.peerConnection.close();
             this.peerConnection = null;
         }
-        this.remoteVideo.srcObject = null;
+        
+        // Reset remote video
+        if (this.remoteVideo.srcObject) {
+            const tracks = this.remoteVideo.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            this.remoteVideo.srcObject = null;
+        }
+        
         this.remotePlaceholder.classList.remove('hidden');
+        console.log('Peer connection closed and remote video reset');
     }
     
     stopLocalStream() {
         if (this.localStream) {
-            this.localStream.getTracks().forEach(track => track.stop());
+            console.log('Stopping local stream');
+            this.localStream.getTracks().forEach(track => {
+                console.log('Stopping track:', track.kind);
+                track.stop();
+            });
             this.localStream = null;
         }
-        this.localVideo.srcObject = null;
+        
+        if (this.localVideo.srcObject) {
+            this.localVideo.srcObject = null;
+        }
+        console.log('Local stream stopped');
     }
     
     toggleMic() {
