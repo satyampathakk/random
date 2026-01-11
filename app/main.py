@@ -8,6 +8,9 @@ from typing import Optional
 import uuid
 import random
 from datetime import datetime
+import json
+import os
+from pathlib import Path
 
 app = FastAPI(title="Random Chat")
 
@@ -17,6 +20,9 @@ templates = Jinja2Templates(directory="app/templates")
 # Admin API Key - Change this to a secure random string!
 ADMIN_API_KEY = "your-secret-admin-key-change-this"
 
+# Stats file path
+STATS_FILE = Path("app/data/stats.json")
+
 # Stats tracking
 class Stats:
     def __init__(self):
@@ -25,6 +31,40 @@ class Stats:
         self.total_messages = 0
         self.video_chat_visitors = 0
         self.start_time = datetime.now()
+        self.load_from_file()
+    
+    def load_from_file(self):
+        """Load persistent stats from file"""
+        try:
+            if STATS_FILE.exists():
+                with open(STATS_FILE, 'r') as f:
+                    data = json.load(f)
+                    self.total_visitors = data.get('total_visitors', 0)
+                    self.total_connections = data.get('total_connections', 0)
+                    self.total_messages = data.get('total_messages', 0)
+                    self.video_chat_visitors = data.get('video_chat_visitors', 0)
+                    print(f"Loaded stats from file: {data}")
+        except Exception as e:
+            print(f"Error loading stats: {e}")
+    
+    def save_to_file(self):
+        """Save persistent stats to file"""
+        try:
+            # Create data directory if it doesn't exist
+            STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            
+            data = {
+                'total_visitors': self.total_visitors,
+                'total_connections': self.total_connections,
+                'total_messages': self.total_messages,
+                'video_chat_visitors': self.video_chat_visitors,
+                'last_updated': datetime.now().isoformat()
+            }
+            
+            with open(STATS_FILE, 'w') as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            print(f"Error saving stats: {e}")
     
     def to_dict(self):
         return {
@@ -37,6 +77,26 @@ class Stats:
         }
 
 stats = Stats()
+
+# Background task for periodic stats saving
+async def periodic_stats_save():
+    """Save stats every 60 seconds"""
+    while True:
+        await asyncio.sleep(60)
+        stats.save_to_file()
+        print("Stats auto-saved")
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks on startup"""
+    asyncio.create_task(periodic_stats_save())
+    print("Stats loaded and auto-save started")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Save stats on shutdown"""
+    stats.save_to_file()
+    print("Stats saved on shutdown")
 
 # Bot names and conversation starters
 BOT_NAMES = [
@@ -239,6 +299,7 @@ async def handle_bot_reply(user: User, user_message: str, bot_name: str):
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     stats.total_visitors += 1
+    stats.save_to_file()
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -321,6 +382,9 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, mode: str):
     if mode == "video":
         stats.video_chat_visitors += 1
     
+    # Save stats to file after incrementing
+    stats.save_to_file()
+    
     bot_name = None
     
     try:
@@ -370,6 +434,7 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, mode: str):
             if msg_type == "chat_message":
                 message = data.get("message", "")
                 stats.total_messages += 1
+                stats.save_to_file()
                 
                 # Check if chatting with bot
                 if user.partner_id and user.partner_id.startswith("bot_") and bot_name:
