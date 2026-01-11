@@ -38,6 +38,7 @@
         statTextQueue: document.getElementById('stat-text-queue'),
         statVideoQueue: document.getElementById('stat-video-queue'),
         statVisitors: document.getElementById('stat-visitors'),
+        statVideoVisitors: document.getElementById('stat-video-visitors'),
         statConnections: document.getElementById('stat-connections'),
         statMessages: document.getElementById('stat-messages'),
         statUptime: document.getElementById('stat-uptime'),
@@ -301,6 +302,7 @@
         // Lifetime stats
         if (data.lifetime) {
             elements.statVisitors.textContent = formatNumber(data.lifetime.total_visitors || 0);
+            elements.statVideoVisitors.textContent = formatNumber(data.lifetime.video_chat_visitors || 0);
             elements.statConnections.textContent = formatNumber(data.lifetime.total_connections || 0);
             elements.statMessages.textContent = formatNumber(data.lifetime.total_messages || 0);
             elements.statUptime.textContent = formatUptime(data.lifetime.uptime_seconds || 0);

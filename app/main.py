@@ -23,6 +23,7 @@ class Stats:
         self.total_visitors = 0
         self.total_connections = 0
         self.total_messages = 0
+        self.video_chat_visitors = 0
         self.start_time = datetime.now()
     
     def to_dict(self):
@@ -30,6 +31,7 @@ class Stats:
             "total_visitors": self.total_visitors,
             "total_connections": self.total_connections,
             "total_messages": self.total_messages,
+            "video_chat_visitors": self.video_chat_visitors,
             "uptime_seconds": int((datetime.now() - self.start_time).total_seconds()),
             "start_time": self.start_time.isoformat()
         }
@@ -314,6 +316,11 @@ async def admin_online(x_admin_key: str = Header(None)):
 async def websocket_endpoint(websocket: WebSocket, nickname: str, mode: str):
     user = await manager.connect(websocket, nickname, mode)
     stats.total_connections += 1
+    
+    # Track video chat visitors
+    if mode == "video":
+        stats.video_chat_visitors += 1
+    
     bot_name = None
     
     try:
