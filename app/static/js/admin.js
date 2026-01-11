@@ -212,7 +212,10 @@
             }
             
             hideErrorBanner();
-            return await response.json();
+            const jsonData = await response.json();
+            console.log('[ADMIN] Received stats:', jsonData);
+            console.log('[ADMIN] Video chat visitors from API:', jsonData.lifetime?.video_chat_visitors);
+            return jsonData;
         } catch (error) {
             console.error('Error fetching stats:', error);
             showErrorBanner('Connection error. Retrying...');
@@ -301,7 +304,9 @@
         
         // Video chat metrics
         if (data.lifetime) {
-            elements.statTotalVideoVisitors.textContent = formatNumber(data.lifetime.video_chat_visitors || 0);
+            const videoVisitors = data.lifetime.video_chat_visitors || 0;
+            console.log('[ADMIN] Video chat visitors:', videoVisitors);
+            elements.statTotalVideoVisitors.textContent = formatNumber(videoVisitors);
         }
         
         // Lifetime stats
