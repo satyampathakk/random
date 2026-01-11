@@ -256,7 +256,8 @@ async def debug_stats():
         "total_visitors": stats.total_visitors,
         "total_connections": stats.total_connections,
         "total_messages": stats.total_messages,
-        "video_chat_visitors": stats.video_chat_visitors
+        "video_chat_visitors": stats.video_chat_visitors,
+        "message": f"Video chat visitors counter is working! Current value: {stats.video_chat_visitors}"
     }
 
 # ==================== ADMIN API ====================
